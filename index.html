@@ -803,7 +803,9 @@
         // Novel (Double Novel Day)
         { id: 't29', categoryId: 'novel', text: 'Double novel day: write an extra scene or sprint on your main novel.', active: true },
         { id: 't30', categoryId: 'novel', text: 'The Dead Below (AI novel): draft or reverse-write the next scene or chapter beat.', active: true },
-        { id: 't31', categoryId: 'novel', text: '2027 Non-AI Novel: prep, outline, or write a human-drafted scene for your upcoming novel.', active: true }
+        { id: 't31', categoryId: 'novel', text: '2027 Non-AI Novel: prep, outline, or write a human-drafted scene for your upcoming novel.', active: true },
+        { id: 't32', categoryId: 'novel', text: 'New novel: start a brand-new novel idea.', active: true },
+        { id: 't33', categoryId: 'novel', text: 'Codex novel: revive or expand an existing idea from your Codex or Google Drive.', active: true }
       ];
 
       const DEFAULT_METHODS = [
@@ -897,6 +899,11 @@
               const merged = { ...createDefaultState(), ...parsed };
               if (!Array.isArray(merged.projects)) merged.projects = cloneDefaultProjects();
               if (!Array.isArray(merged.methods)) merged.methods = DEFAULT_METHODS.map(m => ({ ...m }));
+              DEFAULT_TASKS.forEach(t => {
+                if (!merged.tasks.some(existing => existing.id === t.id)) {
+                  merged.tasks.push({ ...t });
+                }
+              });
               return merged;
             }
           }
