@@ -1,0 +1,2243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Writing Picker</title>
+  <style>
+    :root {
+      --bg-paper: #faf8f4;
+      --card-surface: #ffffff;
+      --ink-primary: #1c1917;
+      --ink-muted: #57534e;
+      --border-soft: #e7e2d9;
+    }
+
+    /* Preflight Reset (100% Offline) */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      border-width: 0;
+      border-style: solid;
+      border-color: #e7e5e4;
+    }
+    html { line-height: 1.5; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-paper);
+      color: var(--ink-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, p { margin: 0; }
+    button, input, select, textarea {
+      font-family: inherit;
+      font-size: 100%;
+      line-height: inherit;
+      color: inherit;
+      margin: 0;
+      padding: 0;
+    }
+    button { background: transparent; cursor: pointer; }
+    svg { display: block; vertical-align: middle; }
+    input[type="checkbox"] { accent-color: #1c1917; }
+
+    /* Animations */
+    @keyframes cardPop {
+      0% { transform: scale(0.97); opacity: 0.7; }
+      60% { transform: scale(1.015); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop { animation: cardPop 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .rolling-text { filter: blur(0.4px); opacity: 0.72; transform: translateY(-2px); transition: all 0.08s ease; }
+    .toast-enter { animation: toastSlide 0.25s ease-out forwards; }
+    @keyframes toastSlide {
+      from { transform: translate(-50%, 16px); opacity: 0; }
+      to { transform: translate(-50%, 0); opacity: 1; }
+    }
+
+    /* Layout & Display */
+    .hidden { display: none !important; }
+    .block { display: block; }
+    .inline-block { display: inline-block; }
+    .flex { display: flex; }
+    .inline-flex { display: inline-flex; }
+    .grid { display: grid; }
+    .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    .flex-col { flex-direction: column; }
+    .flex-wrap { flex-wrap: wrap; }
+    .flex-1 { flex: 1 1 0%; }
+    .shrink-0 { flex-shrink: 0; }
+    .items-center { align-items: center; }
+    .items-start { align-items: flex-start; }
+    .items-end { align-items: flex-end; }
+    .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; }
+    .relative { position: relative; }
+    .fixed { position: fixed; }
+    .sticky { position: sticky; }
+    .top-0 { top: 0; }
+    .bottom-5 { bottom: 1.25rem; }
+    .left-1\/2 { left: 50%; }
+    .-translate-x-1\/2 { transform: translateX(-50%); }
+    .z-20 { z-index: 20; }
+    .z-50 { z-index: 50; }
+    .overflow-hidden { overflow: hidden; }
+
+    /* Sizing */
+    .min-h-screen { min-height: 100vh; }
+    .min-h-\[240px\] { min-height: 240px; }
+    .min-h-\[260px\] { min-height: 260px; }
+    .min-w-0 { min-width: 0; }
+    .w-full { width: 100%; }
+    .w-2 { width: 0.5rem; }
+    .w-2\.5 { width: 0.625rem; }
+    .w-3\.5 { width: 0.875rem; }
+    .w-4 { width: 1rem; }
+    .w-6 { width: 1.5rem; }
+    .w-8 { width: 2rem; }
+    .w-12 { width: 3rem; }
+    .w-32 { width: 8rem; }
+    .w-36 { width: 9rem; }
+    .h-full { height: 100%; }
+    .h-1\.5 { height: 0.375rem; }
+    .h-2 { height: 0.5rem; }
+    .h-2\.5 { height: 0.625rem; }
+    .h-3\.5 { height: 0.875rem; }
+    .h-4 { height: 1rem; }
+    .h-6 { height: 1.5rem; }
+    .h-8 { height: 2rem; }
+    .h-12 { height: 3rem; }
+    .h-14 { height: 3.5rem; }
+    .max-w-xs { max-width: 20rem; }
+    .max-w-md { max-width: 28rem; }
+    .max-w-xl { max-width: 36rem; }
+    .max-w-3xl { max-width: 48rem; }
+
+    /* Spacing */
+    .mx-auto { margin-left: auto; margin-right: auto; }
+    .mb-1 { margin-bottom: 0.25rem; }
+    .mr-1\.5 { margin-right: 0.375rem; }
+    .mt-0\.5 { margin-top: 0.125rem; }
+    .mt-1\.5 { margin-top: 0.375rem; }
+    .mt-2\.5 { margin-top: 0.625rem; }
+    .p-1 { padding: 0.25rem; }
+    .p-1\.5 { padding: 0.375rem; }
+    .p-2 { padding: 0.5rem; }
+    .p-4 { padding: 1rem; }
+    .p-6 { padding: 1.5rem; }
+    .p-8 { padding: 2rem; }
+    .px-1\.5 { padding-left: 0.375rem; padding-right: 0.375rem; }
+    .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+    .px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
+    .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .px-3\.5 { padding-left: 0.875rem; padding-right: 0.875rem; }
+    .px-4 { padding-left: 1rem; padding-right: 1rem; }
+    .px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+    .py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+    .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+    .py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+    .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    .py-2\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+    .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+    .py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+    .pt-2 { padding-top: 0.5rem; }
+    .pl-2 { padding-left: 0.5rem; }
+    .pl-7 { padding-left: 1.75rem; }
+    .pr-1\.5 { padding-right: 0.375rem; }
+    .gap-1 { gap: 0.25rem; }
+    .gap-1\.5 { gap: 0.375rem; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-2\.5 { gap: 0.625rem; }
+    .gap-3 { gap: 0.75rem; }
+    .space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.25rem; }
+    .space-y-1\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.375rem; }
+    .space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem; }
+    .space-y-2\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.625rem; }
+    .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
+    .space-y-3\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.875rem; }
+    .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
+    .space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.25rem; }
+    .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem; }
+
+    /* Typography */
+    .text-\[11px\] { font-size: 11px; line-height: 1.4; }
+    .text-xs { font-size: 0.75rem; line-height: 1rem; }
+    .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+    .text-base { font-size: 1rem; line-height: 1.5rem; }
+    .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+    .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+    .font-medium { font-weight: 500; }
+    .font-semibold { font-weight: 600; }
+    .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .leading-snug { line-height: 1.375; }
+    .tracking-tight { letter-spacing: -0.025em; }
+    .tracking-wide { letter-spacing: 0.025em; }
+    .tracking-wider { letter-spacing: 0.05em; }
+    .uppercase { text-transform: uppercase; }
+    .underline { text-decoration: underline; }
+    .underline-offset-2 { text-underline-offset: 2px; }
+    .line-through { text-decoration: line-through; }
+    .text-center { text-align: center; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Colors */
+    .bg-white { background-color: #ffffff; }
+    .bg-white\/80 { background-color: rgba(255, 255, 255, 0.82); }
+    .bg-stone-50 { background-color: #fafaf9; }
+    .bg-stone-50\/60 { background-color: rgba(250, 250, 249, 0.6); }
+    .bg-stone-50\/80 { background-color: rgba(250, 250, 249, 0.8); }
+    .bg-stone-100 { background-color: #f5f5f4; }
+    .bg-stone-100\/80 { background-color: rgba(245, 245, 244, 0.8); }
+    .bg-stone-900 { background-color: #1c1917; }
+    .bg-amber-50 { background-color: #fffbeb; }
+    .bg-emerald-50 { background-color: #ecfdf5; }
+    .bg-emerald-100 { background-color: #d1fae5; }
+    .bg-emerald-700 { background-color: #047857; }
+    .bg-rose-50 { background-color: #fff1f2; }
+
+    .text-white { color: #ffffff; }
+    .text-amber-50 { color: #fffbeb; }
+    .text-amber-600 { color: #d97706; }
+    .text-amber-800 { color: #92400e; }
+    .text-emerald-800 { color: #065f46; }
+    .text-rose-700 { color: #be123c; }
+    .text-stone-300 { color: #d6d3d1; }
+    .text-stone-400 { color: #a8a29e; }
+    .text-stone-500 { color: #78716c; }
+    .text-stone-600 { color: #57534e; }
+    .text-stone-700 { color: #44403c; }
+    .text-stone-800 { color: #292524; }
+    .text-stone-900 { color: #1c1917; }
+    .placeholder-stone-400::placeholder { color: #a8a29e; }
+
+    /* Borders & Radii */
+    .border { border-width: 1px; }
+    .border-b { border-bottom-width: 1px; }
+    .border-t { border-top-width: 1px; }
+    .border-dashed { border-style: dashed; }
+    .border-\[\#e7e2d9\] { border-color: #e7e2d9; }
+    .border-stone-100 { border-color: #f5f5f4; }
+    .border-stone-200 { border-color: #e7e5e4; }
+    .border-stone-200\/70 { border-color: rgba(231, 229, 228, 0.7); }
+    .border-stone-200\/80 { border-color: rgba(231, 229, 228, 0.8); }
+    .border-stone-300 { border-color: #d6d3d1; }
+    .border-stone-900 { border-color: #1c1917; }
+    .border-amber-200\/80 { border-color: rgba(253, 230, 138, 0.8); }
+    .border-emerald-200 { border-color: #a7f3d0; }
+    .border-rose-300 { border-color: #fda4af; }
+
+    .rounded { border-radius: 0.25rem; }
+    .rounded-md { border-radius: 0.375rem; }
+    .rounded-lg { border-radius: 0.5rem; }
+    .rounded-xl { border-radius: 0.75rem; }
+    .rounded-2xl { border-radius: 1rem; }
+    .rounded-full { border-radius: 9999px; }
+
+    /* Effects & Interactivity */
+    .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+    .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1); }
+    .backdrop-blur-sm { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+    .opacity-55 { opacity: 0.55; }
+    .opacity-60 { opacity: 0.6; }
+    .opacity-70 { opacity: 0.7; }
+    .cursor-pointer { cursor: pointer; }
+    .select-none { user-select: none; -webkit-user-select: none; }
+    .resize-y { resize: vertical; }
+    .transition-all { transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1); }
+    .transition-colors { transition: color 150ms, background-color 150ms, border-color 150ms; }
+    .transition-opacity { transition: opacity 150ms; }
+    .duration-300 { transition-duration: 300ms; }
+
+    /* Hover, Focus & Active */
+    .hover\:bg-stone-100:hover { background-color: #f5f5f4; }
+    .hover\:bg-stone-200:hover { background-color: #e7e5e4; }
+    .hover\:bg-stone-200\/70:hover { background-color: rgba(231, 229, 228, 0.7); }
+    .hover\:bg-stone-800:hover { background-color: #292524; }
+    .hover\:bg-emerald-100:hover { background-color: #d1fae5; }
+    .hover\:bg-emerald-800:hover { background-color: #065f46; }
+    .hover\:bg-rose-50:hover { background-color: #fff1f2; }
+    .hover\:border-rose-200:hover { border-color: #fecdd3; }
+    .hover\:text-stone-900:hover { color: #1c1917; }
+    .hover\:text-rose-600:hover { color: #e11d48; }
+    .hover\:text-rose-700:hover { color: #be123c; }
+    .active\:scale-\[0\.98\]:active { transform: scale(0.98); }
+    .focus\:outline-none:focus { outline: none; }
+    .focus\:border-stone-400:focus { border-color: #a8a29e; }
+    .focus\:ring-2:focus { box-shadow: 0 0 0 2px rgba(41, 37, 36, 0.2); }
+    .focus\:ring-stone-800:focus { box-shadow: 0 0 0 2px rgba(41, 37, 36, 0.25); }
+    .focus\:ring-stone-800\/20:focus { box-shadow: 0 0 0 2px rgba(41, 37, 36, 0.2); }
+
+    /* Responsive sm (>= 640px) */
+    @media (min-width: 640px) {
+      .sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sm\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+      .sm\:col-span-4 { grid-column: span 4 / span 4; }
+      .sm\:col-span-8 { grid-column: span 8 / span 8; }
+      .sm\:items-center { align-items: center; }
+      .sm\:mt-0 { margin-top: 0; }
+      .sm\:p-5 { padding: 1.25rem; }
+      .sm\:p-8 { padding: 2rem; }
+      .sm\:px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+      .sm\:px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+      .sm\:py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+      .sm\:text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+      .sm\:text-base { font-size: 1rem; line-height: 1.5rem; }
+      .sm\:text-2xl { font-size: 1.5rem; line-height: 2rem; }
+      .sm\:w-40 { width: 10rem; }
+      .sm\:w-44 { width: 11rem; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Top Header -->
+  <header class="w-full border-b border-[#e7e2d9] bg-white/80 backdrop-blur-sm sticky top-0 z-20">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-8 h-8 rounded-lg bg-stone-900 text-amber-50 flex items-center justify-center shrink-0 shadow-sm" aria-hidden="true">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+          </svg>
+        </div>
+        <div class="truncate">
+          <h1 class="text-sm sm:text-base font-semibold tracking-tight text-stone-900 truncate">Daily Writing Picker</h1>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center bg-stone-100 p-1 rounded-lg border border-stone-200/70" aria-label="Views">
+        <button id="tab-pick" type="button" class="nav-tab px-2.5 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-md transition-all bg-white text-stone-900 shadow-sm">
+          Picker
+        </button>
+        <button id="tab-projects" type="button" class="nav-tab px-2.5 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">
+          Projects
+        </button>
+        <button id="tab-pool" type="button" class="nav-tab px-2.5 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">
+          Pool
+        </button>
+        <button id="tab-history" type="button" class="nav-tab px-3 py-1 text-xs sm:text-sm font-medium rounded-md transition-all text-stone-600 hover:text-stone-900">
+          Log
+        </button>
+      </nav>
+
+      <!-- Sound Toggle -->
+      <button id="btn-sound" type="button" title="Toggle subtle click sound" aria-label="Toggle sound"
+        class="p-2 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors shrink-0">
+        <svg id="icon-sound-on" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+        </svg>
+        <svg id="icon-sound-off" class="w-4 h-4 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.531V19.94a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.506-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+    <!-- ==================== VIEW 1: PICKER ==================== -->
+    <section id="view-pick" class="space-y-6">
+      <!-- Date & Novel Context Strip -->
+      <div class="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm text-stone-500">
+        <div class="flex items-center gap-2">
+          <span id="today-date" class="font-medium text-stone-700"></span>
+          <span class="text-stone-300">&bull;</span>
+          <span>Side-quest alongside your novel</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="streak-pill" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 text-xs font-medium">
+            <svg class="w-3.5 h-3.5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd" />
+            </svg>
+            <span id="streak-count">0</span> completed
+          </span>
+        </div>
+      </div>
+
+      <!-- Category Filter Bar -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium uppercase tracking-wider text-stone-500">Active Categories</span>
+          <label class="inline-flex items-center gap-1.5 text-xs text-stone-600 cursor-pointer select-none">
+            <input id="toggle-vary" type="checkbox" checked class="rounded border-stone-300 text-stone-900 focus:ring-stone-800 w-3.5 h-3.5" />
+            <span>Avoid repeating last category</span>
+          </label>
+        </div>
+        <div id="category-pills" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Main Picker Card -->
+      <div id="picker-card" class="relative bg-white rounded-2xl border border-[#e7e2d9] shadow-sm overflow-hidden transition-all">
+        <!-- Top accent bar colored by category -->
+        <div id="card-accent" class="h-1.5 w-full bg-stone-900 transition-colors duration-300"></div>
+
+        <div class="p-6 sm:p-8 flex flex-col items-center text-center min-h-[260px] justify-center">
+          <!-- Idle / Empty Pick State -->
+          <div id="state-idle" class="space-y-4 max-w-md">
+            <div class="w-12 h-12 rounded-2xl bg-stone-100 text-stone-700 flex items-center justify-center mx-auto">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-xl sm:text-2xl font-semibold text-stone-900 tracking-tight">Ready for today's sub-task?</h2>
+              <p class="mt-1.5 text-sm text-stone-500">Pick a quick creative detour to keep your daily writing fresh alongside your novel.</p>
+            </div>
+            <div class="pt-2">
+              <button id="btn-pick-main" type="button"
+                class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-stone-900 text-white text-sm sm:text-base font-medium hover:bg-stone-800 active:scale-[0.98] transition-all shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                <span>Pick Today's Task</span>
+              </button>
+              <p class="mt-2.5 text-xs text-stone-400">Tip: Press <kbd class="px-1.5 py-0.5 rounded bg-stone-100 border border-stone-200 text-stone-600 font-mono text-[11px]">Space</kbd> to roll</p>
+            </div>
+          </div>
+
+          <!-- Active Picked State -->
+          <div id="state-picked" class="hidden w-full max-w-xl space-y-5">
+            <div class="flex items-center justify-center gap-2 flex-wrap">
+              <span id="picked-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase"></span>
+              <span id="picked-method-pill" class="hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-700 border border-stone-200/80"></span>
+              <span id="picked-done-pill" class="hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                Done Today
+              </span>
+            </div>
+
+            <p id="picked-text" class="text-xl sm:text-2xl font-semibold text-stone-900 leading-snug tracking-tight transition-all"></p>
+
+            <p id="picked-meta" class="text-xs text-stone-500"></p>
+
+            <!-- Action Row -->
+            <div class="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+              <button id="btn-complete" type="button"
+                class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-700 text-white text-sm font-medium hover:bg-emerald-800 active:scale-[0.98] transition-all shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                <span id="btn-complete-label">Mark Complete</span>
+              </button>
+
+              <button id="btn-reroll" type="button"
+                class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 active:scale-[0.98] transition-all shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                <span>Roll Again</span>
+              </button>
+
+              <button id="btn-copy" type="button"
+                class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-stone-100 text-stone-700 text-sm font-medium hover:bg-stone-200 active:scale-[0.98] transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+                </svg>
+                <span>Copy</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Pool Summary Strip -->
+        <div class="px-5 py-3 bg-stone-50/80 border-t border-[#e7e2d9] flex flex-wrap items-center justify-between gap-2 text-xs text-stone-500">
+          <span id="pool-summary-text"></span>
+          <button id="btn-quick-add-link" type="button" class="font-medium text-stone-700 hover:text-stone-900 underline underline-offset-2">
+            + Add or edit tasks
+          </button>
+        </div>
+      </div>
+
+      <!-- Writing Method Roller Card -->
+      <div id="method-roller-card" class="bg-white rounded-2xl border border-[#e7e2d9] shadow-sm p-4 sm:p-5 space-y-3.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-stone-500">Writing Method</span>
+            <span id="method-current-pill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-stone-900 text-white">
+              Not rolled yet
+            </span>
+          </div>
+          <div class="flex items-center gap-3">
+            <label class="inline-flex items-center gap-1.5 text-xs text-stone-600 cursor-pointer select-none">
+              <input id="toggle-pair-method" type="checkbox" checked class="rounded border-stone-300 text-stone-900 focus:ring-stone-800 w-3.5 h-3.5" />
+              <span>Roll with task</span>
+            </label>
+            <button id="btn-roll-method" type="button"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 text-white text-xs font-medium hover:bg-stone-800 active:scale-[0.98] transition-all shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+              <span>Roll Method</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="method-pills" class="flex flex-wrap gap-1.5"></div>
+
+        <div class="pt-2 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span class="text-stone-400">Click any method to toggle it in or out of your rolls.</span>
+          <div class="flex items-center gap-1.5">
+            <input id="new-method-name" type="text" maxlength="40" placeholder="Add method..."
+              class="w-32 sm:w-40 text-xs bg-stone-50 border border-stone-200 rounded-md px-2.5 py-1 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-stone-400" />
+            <button id="btn-add-method" type="button"
+              class="px-2.5 py-1 rounded-md bg-stone-100 text-stone-700 font-medium hover:bg-stone-200 transition-colors">
+              + Add
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Note Box for Today's Pick (optional scratchpad) -->
+      <div id="scratchpad-wrap" class="hidden bg-white rounded-xl border border-[#e7e2d9] p-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <label for="today-note" class="text-xs font-medium uppercase tracking-wider text-stone-500">Quick Idea / Note for Today's Task</label>
+          <span id="note-saved-indicator" class="text-[11px] text-stone-400">Saved locally</span>
+        </div>
+        <textarea id="today-note" rows="2" placeholder="Jot down a title, contest link, or opening line..."
+          class="w-full text-sm text-stone-800 placeholder-stone-400 bg-stone-50/60 border border-stone-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-stone-800/20 focus:border-stone-400 resize-y"></textarea>
+      </div>
+    </section>
+
+
+    <!-- ==================== VIEW 1B: LARGER PROJECTS ==================== -->
+    <section id="view-projects" class="hidden space-y-6">
+      <!-- Top Context Strip -->
+      <div class="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm text-stone-500">
+        <div class="flex items-center gap-2">
+          <span class="font-medium text-stone-700">Larger Projects</span>
+          <span class="text-stone-300">&bull;</span>
+          <span>Roll your main creative focus &amp; sub-track</span>
+        </div>
+        <label class="inline-flex items-center gap-1.5 text-xs text-stone-600 cursor-pointer select-none">
+          <input id="toggle-vary-project" type="checkbox" checked class="rounded border-stone-300 text-stone-900 focus:ring-stone-800 w-3.5 h-3.5" />
+          <span>Avoid repeating last project</span>
+        </label>
+      </div>
+
+      <!-- Project Picker Card -->
+      <div id="project-picker-card" class="relative bg-white rounded-2xl border border-[#e7e2d9] shadow-sm overflow-hidden transition-all">
+        <div id="project-card-accent" class="h-1.5 w-full bg-stone-900 transition-colors duration-300"></div>
+
+        <div class="p-6 sm:p-8 flex flex-col items-center text-center min-h-[240px] justify-center">
+          <!-- Idle Project State -->
+          <div id="proj-state-idle" class="space-y-4 max-w-md">
+            <div class="w-12 h-12 rounded-2xl bg-stone-100 text-stone-700 flex items-center justify-center mx-auto">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-xl sm:text-2xl font-semibold text-stone-900 tracking-tight">Pick a Larger Project</h2>
+              <p class="mt-1.5 text-sm text-stone-500">Roll one of your active long-term projects. If it has sub-tracks, a specific focus is picked too.</p>
+            </div>
+            <div class="pt-2">
+              <button id="btn-pick-project" type="button"
+                class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-stone-900 text-white text-sm sm:text-base font-medium hover:bg-stone-800 active:scale-[0.98] transition-all shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                <span>Roll Project Focus</span>
+              </button>
+              <p class="mt-2.5 text-xs text-stone-400">Tip: Press <kbd class="px-1.5 py-0.5 rounded bg-stone-100 border border-stone-200 text-stone-600 font-mono text-[11px]">Space</kbd> to roll</p>
+            </div>
+          </div>
+
+          <!-- Active Picked Project State -->
+          <div id="proj-state-picked" class="hidden w-full max-w-xl space-y-4">
+            <div class="flex items-center justify-center gap-2 flex-wrap">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase bg-stone-100 text-stone-700">Larger Project</span>
+              <span id="proj-done-pill" class="hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                Logged Today
+              </span>
+            </div>
+
+            <div class="space-y-2">
+              <p id="proj-picked-title" class="text-xl sm:text-2xl font-semibold text-stone-900 leading-snug tracking-tight transition-all"></p>
+              <div id="proj-picked-sub-wrap" class="hidden">
+                <span class="text-xs text-stone-400 mr-1.5">Focus:</span>
+                <span id="proj-picked-sub" class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold"></span>
+              </div>
+            </div>
+
+            <div class="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+              <button id="btn-proj-complete" type="button"
+                class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-700 text-white text-sm font-medium hover:bg-emerald-800 active:scale-[0.98] transition-all shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                <span id="btn-proj-complete-label">Log Session</span>
+              </button>
+
+              <button id="btn-proj-reroll" type="button"
+                class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 active:scale-[0.98] transition-all shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                <span>Roll Again</span>
+              </button>
+
+              <button id="btn-proj-reroll-sub" type="button"
+                class="hidden inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-stone-100 text-stone-700 text-sm font-medium hover:bg-stone-200 active:scale-[0.98] transition-all">
+                <span>Swap Sub-Track</span>
+              </button>
+
+              <button id="btn-proj-copy" type="button"
+                class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-stone-100 text-stone-700 text-sm font-medium hover:bg-stone-200 active:scale-[0.98] transition-all">
+                <span>Copy</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="px-5 py-3 bg-stone-50/80 border-t border-[#e7e2d9] flex flex-wrap items-center justify-between gap-2 text-xs text-stone-500">
+          <span id="proj-summary-text"></span>
+          <button id="btn-reset-projects" type="button" class="font-medium text-stone-600 hover:text-stone-900 underline underline-offset-2">
+            Reset default projects
+          </button>
+        </div>
+      </div>
+
+      <!-- Add Larger Project Form -->
+      <form id="add-project-form" class="bg-white rounded-xl border border-[#e7e2d9] p-4 shadow-sm space-y-2.5">
+        <label for="new-project-name" class="block text-xs font-medium text-stone-600">Add a larger project</label>
+        <div class="flex gap-2">
+          <input id="new-project-name" type="text" required maxlength="120"
+            placeholder="e.g., New novella draft or YouTube essay series"
+            class="flex-1 min-w-0 text-sm bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800/20 focus:border-stone-400" />
+          <button type="submit"
+            class="px-4 py-2 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 transition-colors shrink-0">
+            Add
+          </button>
+        </div>
+      </form>
+
+      <!-- Projects Roster (with nested sub-tracks) -->
+      <div id="projects-list" class="space-y-3"></div>
+    </section>
+
+    <!-- ==================== VIEW 2: TASK POOL ==================== -->
+    <section id="view-pool" class="hidden space-y-6">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-stone-900">Your Sub-Task Pool</h2>
+          <p class="text-sm text-stone-500">Add, toggle, or remove writing prompts and side quests.</p>
+        </div>
+        <button id="btn-reset-defaults" type="button"
+          class="text-xs font-medium px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-100 hover:text-stone-900 transition-colors">
+          Reset defaults
+        </button>
+      </div>
+
+      <!-- Add Task Form -->
+      <form id="add-task-form" class="bg-white rounded-xl border border-[#e7e2d9] p-4 shadow-sm space-y-3">
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+          <div class="sm:col-span-4">
+            <label for="new-task-category" class="block text-xs font-medium text-stone-600 mb-1">Category</label>
+            <select id="new-task-category"
+              class="w-full text-sm bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-800/20 focus:border-stone-400">
+            </select>
+          </div>
+          <div class="sm:col-span-8">
+            <label for="new-task-text" class="block text-xs font-medium text-stone-600 mb-1">Writing sub-task</label>
+            <div class="flex gap-2">
+              <input id="new-task-text" type="text" required maxlength="180"
+                placeholder="e.g., Enter a flash fiction contest or write a 12-line poem"
+                class="flex-1 min-w-0 text-sm bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-800/20 focus:border-stone-400" />
+              <button type="submit"
+                class="px-4 py-2 rounded-lg bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 transition-colors shrink-0">
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Category Row -->
+        <div class="pt-2 border-t border-stone-100 flex flex-wrap items-center gap-2 text-xs">
+          <span class="text-stone-500">Need another category?</span>
+          <div class="flex items-center gap-1.5">
+            <input id="new-cat-name" type="text" maxlength="24" placeholder="e.g., Worldbuilding"
+              class="w-36 sm:w-44 text-xs bg-stone-50 border border-stone-200 rounded-md px-2.5 py-1.5 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-stone-400" />
+            <button id="btn-add-category" type="button"
+              class="px-2.5 py-1.5 rounded-md bg-stone-100 text-stone-700 font-medium hover:bg-stone-200 transition-colors">
+              + Add Category
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Pool Filter & List -->
+      <div class="space-y-3">
+        <div id="pool-filter-bar" class="flex flex-wrap gap-1.5"></div>
+        <div id="task-list" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: HISTORY LOG ==================== -->
+    <section id="view-history" class="hidden space-y-6">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-stone-900">Completed Log</h2>
+          <p class="text-sm text-stone-500">Track the variety of sub-tasks you've finished alongside your novel.</p>
+        </div>
+        <button id="btn-clear-history" type="button"
+          class="hidden text-xs font-medium px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition-colors">
+          Clear log
+        </button>
+      </div>
+
+      <!-- Variety Breakdown -->
+      <div id="variety-card" class="bg-white rounded-xl border border-[#e7e2d9] p-4 sm:p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium uppercase tracking-wider text-stone-500">Category Variety</span>
+          <span id="history-total-label" class="text-xs font-medium text-stone-600">0 total</span>
+        </div>
+        <div id="variety-bars" class="space-y-2.5"></div>
+      </div>
+
+      <!-- History Entries -->
+      <div id="history-list" class="space-y-2"></div>
+      <!-- Offline Backup & Restore -->
+      <div class="bg-white rounded-xl border border-[#e7e2d9] p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="text-sm font-semibold text-stone-900">Offline Backup</p>
+          <p class="text-xs text-stone-500">Export or restore your tasks, projects, methods, and log as a local JSON file.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-export-json" type="button"
+            class="px-3 py-1.5 rounded-lg bg-stone-900 text-white text-xs font-medium hover:bg-stone-800 transition-colors">
+            Export JSON
+          </button>
+          <button id="btn-import-json" type="button"
+            class="px-3 py-1.5 rounded-lg bg-stone-100 text-stone-700 text-xs font-medium hover:bg-stone-200 transition-colors">
+            Import JSON
+          </button>
+          <input id="input-import-json" type="file" accept=".json,application/json" class="hidden" />
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" role="status" aria-live="polite"
+    class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-stone-900 text-white text-xs sm:text-sm font-medium shadow-lg">
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const STORAGE_KEY = 'daily_writing_picker_v4';
+      const LEGACY_STORAGE_KEYS = ['daily_writing_picker_v3', 'daily_writing_picker_v2', 'daily_writing_picker_v1'];
+
+      const COLOR_PALETTE = [
+        { bg: '#f3e8ff', text: '#6b21a8', border: '#d8b4fe', accent: '#7c3aed' }, // Poetry - Plum
+        { bg: '#ecfdf5', text: '#065f46', border: '#a7f3d0', accent: '#059669' }, // Essay - Emerald
+        { bg: '#fef3c7', text: '#92400e', border: '#fcd34d', accent: '#d97706' }, // Media - Amber
+        { bg: '#ffe4e6', text: '#9f1239', border: '#fda4af', accent: '#e11d48' }, // Short Story - Rose
+        { bg: '#eff6ff', text: '#1e40af', border: '#bfdbfe', accent: '#2563eb' }, // Contest - Cobalt
+        { bg: '#f0fdfa', text: '#115e59', border: '#99f6e4', accent: '#0d9488' }, // Custom 1 - Teal
+        { bg: '#fff7ed', text: '#9a3412', border: '#fed7aa', accent: '#ea580c' }, // Custom 2 - Orange
+        { bg: '#f5f3ff', text: '#3730a3', border: '#c7d2fe', accent: '#4f46e5' }  // Custom 3 - Indigo
+      ];
+
+      const DEFAULT_CATEGORIES = [
+        { id: 'poetry', name: 'Poetry', colorIdx: 0, enabled: true },
+        { id: 'essay', name: 'Essay', colorIdx: 1, enabled: true },
+        { id: 'media', name: 'Media', colorIdx: 2, enabled: true },
+        { id: 'short-story', name: 'Short Story', colorIdx: 3, enabled: true },
+        { id: 'contest', name: 'Contest', colorIdx: 4, enabled: true },
+        { id: 'codex', name: 'Codex Reflection', colorIdx: 5, enabled: true },
+        { id: 'copywork', name: 'Copywork & Study', colorIdx: 6, enabled: true },
+        { id: 'novel', name: 'Novel', colorIdx: 7, enabled: true }
+      ];
+
+      const DEFAULT_TASKS = [
+        // Poetry
+        { id: 't1', categoryId: 'poetry', text: 'Write a 14-line poem from the perspective of a side character or stranger.', active: true },
+        { id: 't2', categoryId: 'poetry', text: 'Draft a free-verse poem anchored on a single vivid sensory detail from today.', active: true },
+        { id: 't3', categoryId: 'poetry', text: 'Write a linked sequence of three haikus capturing a shift in mood or weather.', active: true },
+        { id: 't4', categoryId: 'poetry', text: 'Create a blackout or found poem using a page from a nearby book or article.', active: true },
+
+        // Essay
+        { id: 't5', categoryId: 'essay', text: 'Write a 400-word personal essay on a craft lesson or habit you noticed this week.', active: true },
+        { id: 't6', categoryId: 'essay', text: 'Draft a sharp opinion piece challenging a common piece of writing advice.', active: true },
+        { id: 't7', categoryId: 'essay', text: 'Write a micro-essay (250–300 words) exploring a memory tied to an everyday object.', active: true },
+        { id: 't8', categoryId: 'essay', text: 'Outline and draft a short reflection on a theme currently surfacing in your novel.', active: true },
+
+        // Media
+        { id: 't9', categoryId: 'media', text: 'Write a punchy 300-word review or breakdown of a film, show, or game you watched recently.', active: true },
+        { id: 't10', categoryId: 'media', text: 'Draft a short blog or newsletter note sharing a behind-the-scenes update on your novel.', active: true },
+        { id: 't11', categoryId: 'media', text: 'Write a 1–2 minute script or voiceover unpacking a scene or trope you love.', active: true },
+        { id: 't12', categoryId: 'media', text: 'Draft a short cultural commentary post connecting a current trend to storytelling.', active: true },
+
+        // Short Story
+        { id: 't13', categoryId: 'short-story', text: 'Write a 500-word flash fiction piece that starts right in the middle of an argument.', active: true },
+        { id: 't14', categoryId: 'short-story', text: 'Draft a one-scene short story set in a single room with a ticking clock.', active: true },
+        { id: 't15', categoryId: 'short-story', text: 'Write a brief side story (500–800 words) exploring an untold moment in your novel\'s world.', active: true },
+        { id: 't16', categoryId: 'short-story', text: 'Write a micro-fiction piece (under 250 words) where the final sentence reframes the opening.', active: true },
+
+        // Contest
+        { id: 't17', categoryId: 'contest', text: 'Find one open literary, poetry, or flash-fiction contest and log its deadline and rules.', active: true },
+        { id: 't18', categoryId: 'contest', text: 'Polish an existing short piece or poem and submit it to a contest or magazine.', active: true },
+        { id: 't19', categoryId: 'contest', text: 'Draft a fresh 100-word drabble or micro-story tailored for a themed contest.', active: true },
+        { id: 't20', categoryId: 'contest', text: 'Write a bold opening page (300 words) designed to hook a contest judge immediately.', active: true },
+
+        // Codex Reflection
+        { id: 't21', categoryId: 'codex', text: 'Grab a random Codex entry (journal, note, or online piece) and write a reflection on how your view has changed.', active: true },
+        { id: 't22', categoryId: 'codex', text: 'Pull a random old journal entry from the Codex and mine it for one vivid image, idea, or line to expand today.', active: true },
+        { id: 't23', categoryId: 'codex', text: 'Open a random piece from your Codex online archive and draft a 200-word follow-up or addendum.', active: true },
+        { id: 't24', categoryId: 'codex', text: 'Pick a random Codex entry and write a short bridge connecting it to a question or project you are working on now.', active: true },
+
+        // Copywork & Study
+        { id: 't25', categoryId: 'copywork', text: 'Copy two paragraphs from an old / classic writer and note what gives their sentences weight and cadence.', active: true },
+        { id: 't26', categoryId: 'copywork', text: 'Copy two paragraphs from a new or contemporary writer and study how they pace dialogue or scene turns.', active: true },
+        { id: 't27', categoryId: 'copywork', text: 'Copy two paragraphs from a popular bestselling writer and break down what makes the hook or clarity click.', active: true },
+        { id: 't28', categoryId: 'copywork', text: 'Copy a standout passage from an old, new, or popular writer, then write one fresh paragraph borrowing its rhythm.', active: true },
+
+        // Novel (Double Novel Day)
+        { id: 't29', categoryId: 'novel', text: 'Double novel day: write an extra scene or sprint on your main novel.', active: true },
+        { id: 't30', categoryId: 'novel', text: 'The Dead Below (AI novel): draft or reverse-write the next scene or chapter beat.', active: true },
+        { id: 't31', categoryId: 'novel', text: '2027 Non-AI Novel: prep, outline, or write a human-drafted scene for your upcoming novel.', active: true }
+      ];
+
+      const DEFAULT_METHODS = [
+        { id: 'm_desktop', name: 'Desktop', enabled: true },
+        { id: 'm_phone', name: 'Phone', enabled: true },
+        { id: 'm_right', name: 'Right hand', enabled: true },
+        { id: 'm_left', name: 'Left hand', enabled: true },
+        { id: 'm_quill', name: 'Feather quill', enabled: true },
+        { id: 'm_ai', name: 'AI Reverse-Write', enabled: true },
+        { id: 'm_typewriter', name: 'Typewriter', enabled: false }
+      ];
+
+      const DEFAULT_PROJECTS = [
+        { id: 'p1', name: 'The novel', colorIdx: 0, enabled: true, subItems: [] },
+        { id: 'p2', name: 'Scanning in the journals for the Codex', colorIdx: 5, enabled: true, subItems: [] },
+        {
+          id: 'p3',
+          name: 'Drawing and Cartoon Hero for AI animation',
+          colorIdx: 2,
+          enabled: true,
+          subItems: [
+            { id: 'p3_1', name: 'Proko', enabled: true },
+            { id: 'p3_2', name: 'Gesture', enabled: true },
+            { id: 'p3_3', name: 'Head and hands', enabled: true },
+            { id: 'p3_4', name: 'Pixel art', enabled: true },
+            { id: 'p3_5', name: 'Anime art book', enabled: true }
+          ]
+        },
+        { id: 'p4', name: 'BACKLIST RELOADED', colorIdx: 3, enabled: true, subItems: [] },
+        {
+          id: 'p5',
+          name: 'Audiobook',
+          colorIdx: 4,
+          enabled: true,
+          subItems: [
+            { id: 'p5_1', name: 'Record new audiobook', enabled: true },
+            { id: 'p5_2', name: 'Redistribute audiobook', enabled: true }
+          ]
+        },
+        { id: 'p6', name: 'The Dead Below', colorIdx: 7, enabled: true, subItems: [] }
+      ];
+
+      function getTodayKey() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+
+      function formatDisplayDate(dateObj) {
+        return dateObj.toLocaleDateString(undefined, {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+
+      function cloneDefaultProjects() {
+        return DEFAULT_PROJECTS.map(p => ({
+          ...p,
+          subItems: p.subItems.map(s => ({ ...s }))
+        }));
+      }
+
+      function createDefaultState() {
+        return {
+          categories: DEFAULT_CATEGORIES.map(c => ({ ...c })),
+          tasks: DEFAULT_TASKS.map(t => ({ ...t })),
+          projects: cloneDefaultProjects(),
+          methods: DEFAULT_METHODS.map(m => ({ ...m })),
+          currentPick: null, // { taskId, dateKey, completed, note }
+          currentProjectPick: null, // { projectId, subItemId, dateKey, completed }
+          currentMethodId: null,
+          pairMethodWithTask: true,
+          lastCategoryId: null,
+          lastProjectId: null,
+          varyCategory: true,
+          varyProject: true,
+          soundEnabled: true,
+          history: [] // { id, dateKey, categoryId, categoryName, colorIdx, text, note, methodName }
+        };
+      }
+
+      function loadState() {
+        try {
+          const rawV3 = localStorage.getItem(STORAGE_KEY);
+          if (rawV3) {
+            const parsed = JSON.parse(rawV3);
+            if (parsed && Array.isArray(parsed.categories) && Array.isArray(parsed.tasks)) {
+              const merged = { ...createDefaultState(), ...parsed };
+              if (!Array.isArray(merged.projects)) merged.projects = cloneDefaultProjects();
+              if (!Array.isArray(merged.methods)) merged.methods = DEFAULT_METHODS.map(m => ({ ...m }));
+              return merged;
+            }
+          }
+          // Migrate from v2 or v1 if present
+          for (const key of LEGACY_STORAGE_KEYS) {
+            const rawOld = localStorage.getItem(key);
+            if (rawOld) {
+              const old = JSON.parse(rawOld);
+              if (old && Array.isArray(old.categories) && Array.isArray(old.tasks)) {
+                const merged = {
+                  ...createDefaultState(),
+                  ...old,
+                  projects: Array.isArray(old.projects) ? old.projects : cloneDefaultProjects(),
+                  methods: DEFAULT_METHODS.map(m => ({ ...m }))
+                };
+                ['codex', 'copywork', 'novel'].forEach(cid => {
+                  if (!merged.categories.some(c => c.id === cid)) {
+                    const defCat = DEFAULT_CATEGORIES.find(c => c.id === cid);
+                    if (defCat) merged.categories.push({ ...defCat });
+                  }
+                  DEFAULT_TASKS.filter(t => t.categoryId === cid).forEach(t => {
+                    if (!merged.tasks.some(existing => existing.id === t.id)) {
+                      merged.tasks.push({ ...t });
+                    }
+                  });
+                });
+                return merged;
+              }
+            }
+          }
+          return createDefaultState();
+        } catch (e) {
+          return createDefaultState();
+        }
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {
+          // Ignore storage quota or sandbox errors
+        }
+      }
+
+      let state = loadState();
+      let activeTab = 'pick';
+      let poolFilter = 'all';
+      let isRolling = false;
+      let rollTimer = null;
+      let toastTimer = null;
+      let confirmResetPending = false;
+      let confirmClearPending = false;
+      let confirmResetProjectsPending = false;
+      let isRollingProject = false;
+      let projectRollTimer = null;
+      let audioCtx = null;
+
+      // Subtle Web Audio clicks/chimes (zero external files)
+      function playTone(freq, duration, volume) {
+        if (!state.soundEnabled) return;
+        try {
+          if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            audioCtx = new AudioContextClass();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+          gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + duration);
+        } catch (e) {
+          // Audio blocked or unsupported
+        }
+      }
+
+      function showToast(msg) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        el.classList.remove('toast-enter');
+        void el.offsetWidth;
+        el.classList.add('toast-enter');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          el.classList.add('hidden');
+        }, 2200);
+      }
+
+      function getCategoryById(id) {
+        return state.categories.find(c => c.id === id) || {
+          id: 'other',
+          name: 'Writing',
+          colorIdx: 0,
+          enabled: true
+        };
+      }
+
+      function getColor(colorIdx) {
+        return COLOR_PALETTE[colorIdx % COLOR_PALETTE.length];
+      }
+
+      function getEligibleMethods() {
+        return (state.methods || []).filter(m => m.enabled);
+      }
+
+      function getCurrentMethod() {
+        if (!state.currentMethodId) return null;
+        return (state.methods || []).find(m => m.id === state.currentMethodId) || null;
+      }
+
+      function rollMethod(silent) {
+        const eligible = getEligibleMethods();
+        if (eligible.length === 0) {
+          if (!silent) showToast('Enable at least one writing method.');
+          return null;
+        }
+        let candidates = eligible;
+        if (state.currentMethodId && eligible.length > 1) {
+          const diff = eligible.filter(m => m.id !== state.currentMethodId);
+          if (diff.length > 0) candidates = diff;
+        }
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+        state.currentMethodId = chosen.id;
+        saveState();
+        if (!silent) {
+          playTone(523.25, 0.08, 0.04);
+          renderPicker();
+          const pill = document.getElementById('method-current-pill');
+          pill.classList.remove('animate-pop');
+          void pill.offsetWidth;
+          pill.classList.add('animate-pop');
+        }
+        return chosen;
+      }
+
+      function getEligibleTasks() {
+        const enabledCatIds = new Set(state.categories.filter(c => c.enabled).map(c => c.id));
+        return state.tasks.filter(t => t.active && enabledCatIds.has(t.categoryId));
+      }
+
+      function pickNextTask() {
+        const eligible = getEligibleTasks();
+        if (eligible.length === 0) {
+          showToast('Enable at least one category with active tasks.');
+          return;
+        }
+        if (isRolling) return;
+
+        // Apply variety filter if enabled and multiple categories exist
+        let candidates = eligible;
+        if (state.varyCategory && state.lastCategoryId) {
+          const varied = eligible.filter(t => t.categoryId !== state.lastCategoryId);
+          if (varied.length > 0) {
+            candidates = varied;
+          }
+        }
+        // Also avoid exact same task back-to-back if possible
+        if (state.currentPick && candidates.length > 1) {
+          const different = candidates.filter(t => t.id !== state.currentPick.taskId);
+          if (different.length > 0) {
+            candidates = different;
+          }
+        }
+
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+
+        // Start tactile roll animation
+        isRolling = true;
+        if (rollTimer) clearInterval(rollTimer);
+
+        const idleEl = document.getElementById('state-idle');
+        const pickedEl = document.getElementById('state-picked');
+        const textEl = document.getElementById('picked-text');
+        const badgeEl = document.getElementById('picked-badge');
+        const accentEl = document.getElementById('card-accent');
+        const donePill = document.getElementById('picked-done-pill');
+
+        idleEl.classList.add('hidden');
+        pickedEl.classList.remove('hidden');
+        donePill.classList.add('hidden');
+        textEl.classList.add('rolling-text');
+
+        let ticks = 0;
+        const maxTicks = 8;
+
+        rollTimer = setInterval(() => {
+          ticks++;
+          const sample = eligible[Math.floor(Math.random() * eligible.length)];
+          const cat = getCategoryById(sample.categoryId);
+          const col = getColor(cat.colorIdx);
+
+          textEl.textContent = sample.text;
+          badgeEl.textContent = cat.name;
+          badgeEl.style.backgroundColor = col.bg;
+          badgeEl.style.color = col.text;
+          accentEl.style.backgroundColor = col.accent;
+          playTone(320 + ticks * 30, 0.04, 0.03);
+
+          if (ticks >= maxTicks) {
+            clearInterval(rollTimer);
+            rollTimer = null;
+            isRolling = false;
+            textEl.classList.remove('rolling-text');
+
+            state.currentPick = {
+              taskId: chosen.id,
+              dateKey: getTodayKey(),
+              completed: false,
+              note: ''
+            };
+            state.lastCategoryId = chosen.categoryId;
+            if (state.pairMethodWithTask) {
+              rollMethod(true);
+            }
+            saveState();
+
+            playTone(587.33, 0.14, 0.05);
+            renderPicker();
+
+            const card = document.getElementById('picker-card');
+            card.classList.remove('animate-pop');
+            void card.offsetWidth;
+            card.classList.add('animate-pop');
+          }
+        }, 65);
+      }
+
+      function toggleCompleteCurrent() {
+        if (!state.currentPick || isRolling) return;
+        const task = state.tasks.find(t => t.id === state.currentPick.taskId);
+        if (!task) return;
+
+        if (!state.currentPick.completed) {
+          state.currentPick.completed = true;
+          const cat = getCategoryById(task.categoryId);
+          const activeMethod = getCurrentMethod();
+          state.history.unshift({
+            id: 'h_' + Date.now(),
+            dateKey: getTodayKey(),
+            categoryId: cat.id,
+            categoryName: cat.name,
+            colorIdx: cat.colorIdx,
+            text: task.text,
+            note: (state.currentPick.note || '').trim(),
+            methodName: activeMethod ? activeMethod.name : ''
+          });
+          playTone(659.25, 0.12, 0.05);
+          setTimeout(() => playTone(880, 0.18, 0.05), 90);
+          showToast('Sub-task logged! Nice work.');
+        } else {
+          state.currentPick.completed = false;
+          // Remove most recent matching entry for today
+          const idx = state.history.findIndex(
+            h => h.dateKey === state.currentPick.dateKey && h.text === task.text
+          );
+          if (idx !== -1) state.history.splice(idx, 1);
+          showToast('Marked as incomplete.');
+        }
+        saveState();
+        renderAll();
+      }
+
+      function copyCurrentTask() {
+        if (!state.currentPick) return;
+        const task = state.tasks.find(t => t.id === state.currentPick.taskId);
+        if (!task) return;
+        const cat = getCategoryById(task.categoryId);
+        const activeMethod = getCurrentMethod();
+        const text = activeMethod
+          ? `[${cat.name} | ${activeMethod.name}] ${task.text}`
+          : `[${cat.name}] ${task.text}`;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            showToast('Copied to clipboard');
+          }).catch(() => fallbackCopy(text));
+        } else {
+          fallbackCopy(text);
+        }
+      }
+
+      function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('Copied to clipboard');
+        } catch (e) {
+          showToast('Unable to copy');
+        }
+        document.body.removeChild(ta);
+      }
+
+      function getEligibleProjects() {
+        return state.projects.filter(p => p.enabled);
+      }
+
+      function pickRandomSubItem(project, excludeSubId) {
+        if (!project || !Array.isArray(project.subItems)) return null;
+        const activeSubs = project.subItems.filter(s => s.enabled);
+        if (activeSubs.length === 0) return null;
+        let pool = activeSubs;
+        if (excludeSubId && activeSubs.length > 1) {
+          const diff = activeSubs.filter(s => s.id !== excludeSubId);
+          if (diff.length > 0) pool = diff;
+        }
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      function pickNextProject() {
+        const eligible = getEligibleProjects();
+        if (eligible.length === 0) {
+          showToast('Enable at least one project below to roll.');
+          return;
+        }
+        if (isRollingProject) return;
+
+        let candidates = eligible;
+        if (state.varyProject && state.lastProjectId && eligible.length > 1) {
+          const varied = eligible.filter(p => p.id !== state.lastProjectId);
+          if (varied.length > 0) candidates = varied;
+        }
+
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+        const chosenSub = pickRandomSubItem(chosen, null);
+
+        isRollingProject = true;
+        if (projectRollTimer) clearInterval(projectRollTimer);
+
+        const idleEl = document.getElementById('proj-state-idle');
+        const pickedEl = document.getElementById('proj-state-picked');
+        const titleEl = document.getElementById('proj-picked-title');
+        const subWrap = document.getElementById('proj-picked-sub-wrap');
+        const subEl = document.getElementById('proj-picked-sub');
+        const accentEl = document.getElementById('project-card-accent');
+        const donePill = document.getElementById('proj-done-pill');
+
+        idleEl.classList.add('hidden');
+        pickedEl.classList.remove('hidden');
+        donePill.classList.add('hidden');
+        titleEl.classList.add('rolling-text');
+
+        let ticks = 0;
+        const maxTicks = 8;
+
+        projectRollTimer = setInterval(() => {
+          ticks++;
+          const sample = eligible[Math.floor(Math.random() * eligible.length)];
+          const col = getColor(sample.colorIdx);
+          const sampleSub = pickRandomSubItem(sample, null);
+
+          titleEl.textContent = sample.name;
+          accentEl.style.backgroundColor = col.accent;
+          if (sampleSub) {
+            subWrap.classList.remove('hidden');
+            subEl.textContent = sampleSub.name;
+            subEl.style.backgroundColor = col.bg;
+            subEl.style.color = col.text;
+          } else {
+            subWrap.classList.add('hidden');
+          }
+          playTone(300 + ticks * 32, 0.04, 0.03);
+
+          if (ticks >= maxTicks) {
+            clearInterval(projectRollTimer);
+            projectRollTimer = null;
+            isRollingProject = false;
+            titleEl.classList.remove('rolling-text');
+
+            state.currentProjectPick = {
+              projectId: chosen.id,
+              subItemId: chosenSub ? chosenSub.id : null,
+              dateKey: getTodayKey(),
+              completed: false
+            };
+            state.lastProjectId = chosen.id;
+            saveState();
+
+            playTone(587.33, 0.14, 0.05);
+            renderProjects();
+
+            const card = document.getElementById('project-picker-card');
+            card.classList.remove('animate-pop');
+            void card.offsetWidth;
+            card.classList.add('animate-pop');
+          }
+        }, 65);
+      }
+
+      function swapProjectSubTrack() {
+        if (!state.currentProjectPick || isRollingProject) return;
+        const proj = state.projects.find(p => p.id === state.currentProjectPick.projectId);
+        if (!proj) return;
+        const nextSub = pickRandomSubItem(proj, state.currentProjectPick.subItemId);
+        if (!nextSub) return;
+        state.currentProjectPick.subItemId = nextSub.id;
+        state.currentProjectPick.completed = false;
+        saveState();
+        playTone(523.25, 0.09, 0.04);
+        renderProjects();
+      }
+
+      function toggleCompleteProject() {
+        if (!state.currentProjectPick || isRollingProject) return;
+        const proj = state.projects.find(p => p.id === state.currentProjectPick.projectId);
+        if (!proj) return;
+        const sub = state.currentProjectPick.subItemId
+          ? proj.subItems.find(s => s.id === state.currentProjectPick.subItemId)
+          : null;
+        const labelText = sub ? `${proj.name} — ${sub.name}` : proj.name;
+
+        if (!state.currentProjectPick.completed) {
+          state.currentProjectPick.completed = true;
+          state.history.unshift({
+            id: 'hp_' + Date.now(),
+            dateKey: getTodayKey(),
+            categoryId: 'project',
+            categoryName: 'Larger Project',
+            colorIdx: proj.colorIdx,
+            text: labelText,
+            note: ''
+          });
+          playTone(659.25, 0.12, 0.05);
+          setTimeout(() => playTone(880, 0.18, 0.05), 90);
+          showToast('Project session logged!');
+        } else {
+          state.currentProjectPick.completed = false;
+          const idx = state.history.findIndex(
+            h => h.dateKey === state.currentProjectPick.dateKey && h.text === labelText && h.categoryId === 'project'
+          );
+          if (idx !== -1) state.history.splice(idx, 1);
+          showToast('Session unmarked.');
+        }
+        saveState();
+        renderAll();
+      }
+
+      function copyCurrentProject() {
+        if (!state.currentProjectPick) return;
+        const proj = state.projects.find(p => p.id === state.currentProjectPick.projectId);
+        if (!proj) return;
+        const sub = state.currentProjectPick.subItemId
+          ? proj.subItems.find(s => s.id === state.currentProjectPick.subItemId)
+          : null;
+        const text = sub ? `[Project] ${proj.name} — ${sub.name}` : `[Project] ${proj.name}`;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            showToast('Copied to clipboard');
+          }).catch(() => fallbackCopy(text));
+        } else {
+          fallbackCopy(text);
+        }
+      }
+
+      function switchTab(tabName) {
+        activeTab = tabName;
+        confirmResetPending = false;
+        confirmClearPending = false;
+        confirmResetProjectsPending = false;
+
+        ['pick', 'projects', 'pool', 'history'].forEach(t => {
+          const btn = document.getElementById('tab-' + t);
+          const view = document.getElementById('view-' + t);
+          if (t === tabName) {
+            btn.classList.add('bg-white', 'text-stone-900', 'shadow-sm');
+            btn.classList.remove('text-stone-600');
+            view.classList.remove('hidden');
+          } else {
+            btn.classList.remove('bg-white', 'text-stone-900', 'shadow-sm');
+            btn.classList.add('text-stone-600');
+            view.classList.add('hidden');
+          }
+        });
+        renderAll();
+      }
+
+      function renderSoundIcon() {
+        const on = document.getElementById('icon-sound-on');
+        const off = document.getElementById('icon-sound-off');
+        if (state.soundEnabled) {
+          on.classList.remove('hidden');
+          off.classList.add('hidden');
+        } else {
+          on.classList.add('hidden');
+          off.classList.remove('hidden');
+        }
+      }
+
+      function renderPicker() {
+        document.getElementById('today-date').textContent = formatDisplayDate(new Date());
+        document.getElementById('streak-count').textContent = String(state.history.length);
+        document.getElementById('toggle-vary').checked = !!state.varyCategory;
+
+        // Category pills
+        const pillsWrap = document.getElementById('category-pills');
+        pillsWrap.innerHTML = '';
+
+        state.categories.forEach(cat => {
+          const count = state.tasks.filter(t => t.categoryId === cat.id && t.active).length;
+          const col = getColor(cat.colorIdx);
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all select-none';
+
+          if (cat.enabled) {
+            btn.style.backgroundColor = col.bg;
+            btn.style.color = col.text;
+            btn.style.borderColor = col.border;
+          } else {
+            btn.style.backgroundColor = '#f5f5f4';
+            btn.style.color = '#a8a29e';
+            btn.style.borderColor = '#e7e5e4';
+          }
+
+          btn.innerHTML = `
+            <span class="w-2 h-2 rounded-full" style="background-color:${cat.enabled ? col.accent : '#d6d3d1'}"></span>
+            <span>${escapeHtml(cat.name)}</span>
+            <span class="opacity-70 text-[11px]">${count}</span>
+          `;
+          btn.addEventListener('click', () => {
+            cat.enabled = !cat.enabled;
+            saveState();
+            renderPicker();
+          });
+          pillsWrap.appendChild(btn);
+        });
+
+        // Writing Method roller UI
+        document.getElementById('toggle-pair-method').checked = !!state.pairMethodWithTask;
+        const currentMethod = getCurrentMethod();
+        const methodPillEl = document.getElementById('method-current-pill');
+        if (currentMethod) {
+          methodPillEl.textContent = currentMethod.name;
+          methodPillEl.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-stone-900 text-white';
+        } else {
+          methodPillEl.textContent = 'Not rolled yet';
+          methodPillEl.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-500';
+        }
+
+        const methodPillsWrap = document.getElementById('method-pills');
+        methodPillsWrap.innerHTML = '';
+        (state.methods || []).forEach(m => {
+          const isPicked = currentMethod && currentMethod.id === m.id;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all select-none ${
+            !m.enabled
+              ? 'bg-stone-50 text-stone-400 border-stone-200 line-through'
+              : isPicked
+                ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
+                : 'bg-stone-100/80 text-stone-700 border-stone-200/80 hover:bg-stone-200/70'
+          }`;
+          btn.textContent = m.name;
+          btn.addEventListener('click', () => {
+            m.enabled = !m.enabled;
+            if (!m.enabled && state.currentMethodId === m.id) {
+              state.currentMethodId = null;
+            }
+            saveState();
+            renderPicker();
+          });
+          methodPillsWrap.appendChild(btn);
+        });
+
+        // Pool summary
+        const eligible = getEligibleTasks();
+        const activeCats = state.categories.filter(c => c.enabled).length;
+        document.getElementById('pool-summary-text').textContent =
+          `${eligible.length} active ${eligible.length === 1 ? 'task' : 'tasks'} across ${activeCats} ${activeCats === 1 ? 'category' : 'categories'}`;
+
+        // Current pick card state
+        const idleEl = document.getElementById('state-idle');
+        const pickedEl = document.getElementById('state-picked');
+        const scratchWrap = document.getElementById('scratchpad-wrap');
+        const accentEl = document.getElementById('card-accent');
+
+        const currentTask = state.currentPick
+          ? state.tasks.find(t => t.id === state.currentPick.taskId)
+          : null;
+
+        if (!currentTask) {
+          idleEl.classList.remove('hidden');
+          pickedEl.classList.add('hidden');
+          scratchWrap.classList.add('hidden');
+          accentEl.style.backgroundColor = '#1c1917';
+          return;
+        }
+
+        const cat = getCategoryById(currentTask.categoryId);
+        const col = getColor(cat.colorIdx);
+
+        idleEl.classList.add('hidden');
+        pickedEl.classList.remove('hidden');
+        scratchWrap.classList.remove('hidden');
+
+        accentEl.style.backgroundColor = col.accent;
+        const badgeEl = document.getElementById('picked-badge');
+        badgeEl.textContent = cat.name;
+        badgeEl.style.backgroundColor = col.bg;
+        badgeEl.style.color = col.text;
+
+        const pickedMethodPill = document.getElementById('picked-method-pill');
+        if (currentMethod) {
+          pickedMethodPill.textContent = `Method: ${currentMethod.name}`;
+          pickedMethodPill.classList.remove('hidden');
+        } else {
+          pickedMethodPill.classList.add('hidden');
+        }
+
+        document.getElementById('picked-text').textContent = currentTask.text;
+
+        const isToday = state.currentPick.dateKey === getTodayKey();
+        document.getElementById('picked-meta').textContent = isToday
+          ? 'Picked for today — press Space anytime to re-roll.'
+          : `Carried over from ${state.currentPick.dateKey} — roll fresh whenever you\'re ready.`;
+
+        const donePill = document.getElementById('picked-done-pill');
+        const btnComplete = document.getElementById('btn-complete');
+        const btnCompleteLabel = document.getElementById('btn-complete-label');
+
+        if (state.currentPick.completed) {
+          donePill.classList.remove('hidden');
+          btnComplete.classList.remove('bg-emerald-700', 'hover:bg-emerald-800', 'text-white');
+          btnComplete.classList.add('bg-emerald-50', 'hover:bg-emerald-100', 'text-emerald-800', 'border', 'border-emerald-200');
+          btnCompleteLabel.textContent = 'Completed';
+        } else {
+          donePill.classList.add('hidden');
+          btnComplete.classList.add('bg-emerald-700', 'hover:bg-emerald-800', 'text-white');
+          btnComplete.classList.remove('bg-emerald-50', 'hover:bg-emerald-100', 'text-emerald-800', 'border', 'border-emerald-200');
+          btnCompleteLabel.textContent = 'Mark Complete';
+        }
+
+        const noteEl = document.getElementById('today-note');
+        if (noteEl.value !== (state.currentPick.note || '')) {
+          noteEl.value = state.currentPick.note || '';
+        }
+      }
+
+      function renderProjects() {
+        document.getElementById('toggle-vary-project').checked = !!state.varyProject;
+
+        const resetProjBtn = document.getElementById('btn-reset-projects');
+        resetProjBtn.textContent = confirmResetProjectsPending ? 'Click again to confirm reset' : 'Reset default projects';
+
+        const activeProjs = state.projects.filter(p => p.enabled).length;
+        document.getElementById('proj-summary-text').textContent =
+          `${activeProjs} of ${state.projects.length} larger ${state.projects.length === 1 ? 'project' : 'projects'} active`;
+
+        // Current picked project card
+        const idleEl = document.getElementById('proj-state-idle');
+        const pickedEl = document.getElementById('proj-state-picked');
+        const accentEl = document.getElementById('project-card-accent');
+        const currentProj = state.currentProjectPick
+          ? state.projects.find(p => p.id === state.currentProjectPick.projectId)
+          : null;
+
+        if (!currentProj) {
+          idleEl.classList.remove('hidden');
+          pickedEl.classList.add('hidden');
+          accentEl.style.backgroundColor = '#1c1917';
+        } else {
+          const col = getColor(currentProj.colorIdx);
+          idleEl.classList.add('hidden');
+          pickedEl.classList.remove('hidden');
+          accentEl.style.backgroundColor = col.accent;
+
+          document.getElementById('proj-picked-title').textContent = currentProj.name;
+
+          const activeSubs = (currentProj.subItems || []).filter(s => s.enabled);
+          let chosenSub = state.currentProjectPick.subItemId
+            ? activeSubs.find(s => s.id === state.currentProjectPick.subItemId)
+            : null;
+          if (!chosenSub && activeSubs.length > 0) {
+            chosenSub = activeSubs[0];
+            state.currentProjectPick.subItemId = chosenSub.id;
+          }
+
+          const subWrap = document.getElementById('proj-picked-sub-wrap');
+          const subEl = document.getElementById('proj-picked-sub');
+          const swapSubBtn = document.getElementById('btn-proj-reroll-sub');
+
+          if (chosenSub) {
+            subWrap.classList.remove('hidden');
+            subEl.textContent = chosenSub.name;
+            subEl.style.backgroundColor = col.bg;
+            subEl.style.color = col.text;
+            if (activeSubs.length > 1) {
+              swapSubBtn.classList.remove('hidden');
+            } else {
+              swapSubBtn.classList.add('hidden');
+            }
+          } else {
+            subWrap.classList.add('hidden');
+            swapSubBtn.classList.add('hidden');
+          }
+
+          const donePill = document.getElementById('proj-done-pill');
+          const btnComp = document.getElementById('btn-proj-complete');
+          const btnCompLbl = document.getElementById('btn-proj-complete-label');
+          if (state.currentProjectPick.completed) {
+            donePill.classList.remove('hidden');
+            btnComp.classList.remove('bg-emerald-700', 'hover:bg-emerald-800', 'text-white');
+            btnComp.classList.add('bg-emerald-50', 'hover:bg-emerald-100', 'text-emerald-800', 'border', 'border-emerald-200');
+            btnCompLbl.textContent = 'Logged';
+          } else {
+            donePill.classList.add('hidden');
+            btnComp.classList.add('bg-emerald-700', 'hover:bg-emerald-800', 'text-white');
+            btnComp.classList.remove('bg-emerald-50', 'hover:bg-emerald-100', 'text-emerald-800', 'border', 'border-emerald-200');
+            btnCompLbl.textContent = 'Log Session';
+          }
+        }
+
+        // Render Projects Roster
+        const listEl = document.getElementById('projects-list');
+        listEl.innerHTML = '';
+
+        if (state.projects.length === 0) {
+          listEl.innerHTML = `
+            <div class="bg-white rounded-xl border border-dashed border-stone-300 p-8 text-center text-sm text-stone-500">
+              No projects yet. Add one above to roll your daily focus.
+            </div>
+          `;
+          return;
+        }
+
+        state.projects.forEach(proj => {
+          const col = getColor(proj.colorIdx);
+          const card = document.createElement('div');
+          card.className = `bg-white rounded-xl border border-[#e7e2d9] p-4 space-y-3 transition-opacity ${
+            proj.enabled ? '' : 'opacity-60'
+          }`;
+
+          const subHtml = (proj.subItems || []).map(sub => `
+            <div class="flex items-center justify-between gap-2 pl-2 pr-1.5 py-1 rounded-lg bg-stone-50 border border-stone-200/70">
+              <label class="flex items-center gap-2 text-xs sm:text-sm text-stone-700 cursor-pointer min-w-0 flex-1">
+                <input type="checkbox" data-sub-id="${escapeHtml(sub.id)}" ${sub.enabled ? 'checked' : ''}
+                  class="sub-toggle rounded border-stone-300 text-stone-900 focus:ring-stone-800 w-3.5 h-3.5 shrink-0" />
+                <span class="truncate ${sub.enabled ? '' : 'line-through text-stone-400'}">${escapeHtml(sub.name)}</span>
+              </label>
+              <button type="button" data-sub-id="${escapeHtml(sub.id)}" title="Remove sub-track" aria-label="Remove sub-track"
+                class="sub-delete p-1 rounded text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          `).join('');
+
+          card.innerHTML = `
+            <div class="flex items-center justify-between gap-3">
+              <label class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer">
+                <input type="checkbox" ${proj.enabled ? 'checked' : ''} aria-label="Include project in picker"
+                  class="proj-toggle rounded border-stone-300 text-stone-900 focus:ring-stone-800 w-4 h-4 shrink-0" />
+                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color:${proj.enabled ? col.accent : '#d6d3d1'}"></span>
+                <span class="text-sm sm:text-base font-semibold text-stone-900 truncate ${proj.enabled ? '' : 'line-through text-stone-400'}">${escapeHtml(proj.name)}</span>
+              </label>
+              <button type="button" title="Delete project" aria-label="Delete project"
+                class="proj-delete p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                </svg>
+              </button>
+            </div>
+            ${proj.subItems && proj.subItems.length > 0 ? `<div class="pl-7 grid grid-cols-1 sm:grid-cols-2 gap-1.5">${subHtml}</div>` : ''}
+            <div class="pl-7 flex items-center gap-1.5">
+              <input type="text" maxlength="80" placeholder="Add sub-track..."
+                class="sub-input flex-1 min-w-0 max-w-xs text-xs bg-stone-50 border border-stone-200 rounded-md px-2.5 py-1.5 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-stone-400" />
+              <button type="button" class="sub-add px-2.5 py-1.5 rounded-md bg-stone-100 text-stone-700 text-xs font-medium hover:bg-stone-200 transition-colors shrink-0">
+                + Sub-track
+              </button>
+            </div>
+          `;
+
+          card.querySelector('.proj-toggle').addEventListener('change', (e) => {
+            proj.enabled = e.target.checked;
+            saveState();
+            renderProjects();
+          });
+
+          card.querySelector('.proj-delete').addEventListener('click', () => {
+            state.projects = state.projects.filter(p => p.id !== proj.id);
+            if (state.currentProjectPick && state.currentProjectPick.projectId === proj.id) {
+              state.currentProjectPick = null;
+            }
+            saveState();
+            renderProjects();
+            showToast('Project removed');
+          });
+
+          card.querySelectorAll('.sub-toggle').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+              const sid = cb.getAttribute('data-sub-id');
+              const sub = proj.subItems.find(s => s.id === sid);
+              if (sub) {
+                sub.enabled = e.target.checked;
+                saveState();
+                renderProjects();
+              }
+            });
+          });
+
+          card.querySelectorAll('.sub-delete').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const sid = btn.getAttribute('data-sub-id');
+              proj.subItems = proj.subItems.filter(s => s.id !== sid);
+              if (state.currentProjectPick && state.currentProjectPick.subItemId === sid) {
+                state.currentProjectPick.subItemId = null;
+              }
+              saveState();
+              renderProjects();
+            });
+          });
+
+          const subInput = card.querySelector('.sub-input');
+          const addSub = () => {
+            const val = subInput.value.trim();
+            if (!val) return;
+            proj.subItems.push({
+              id: proj.id + '_s_' + Date.now(),
+              name: val,
+              enabled: true
+            });
+            subInput.value = '';
+            saveState();
+            renderProjects();
+            showToast('Sub-track added');
+          };
+          card.querySelector('.sub-add').addEventListener('click', addSub);
+          subInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              addSub();
+            }
+          });
+
+          listEl.appendChild(card);
+        });
+      }
+
+      function renderPool() {
+        // Reset button label
+        const resetBtn = document.getElementById('btn-reset-defaults');
+        resetBtn.textContent = confirmResetPending ? 'Click again to confirm reset' : 'Reset defaults';
+        if (confirmResetPending) {
+          resetBtn.classList.add('bg-rose-50', 'text-rose-700', 'border-rose-300');
+        } else {
+          resetBtn.classList.remove('bg-rose-50', 'text-rose-700', 'border-rose-300');
+        }
+
+        // Category select dropdown
+        const select = document.getElementById('new-task-category');
+        const prevVal = select.value;
+        select.innerHTML = '';
+        state.categories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat.id;
+          opt.textContent = cat.name;
+          select.appendChild(opt);
+        });
+        if (prevVal && state.categories.some(c => c.id === prevVal)) {
+          select.value = prevVal;
+        }
+
+        // Filter chips
+        const filterBar = document.getElementById('pool-filter-bar');
+        filterBar.innerHTML = '';
+
+        const allChip = document.createElement('button');
+        allChip.type = 'button';
+        allChip.className = `px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+          poolFilter === 'all'
+            ? 'bg-stone-900 text-white'
+            : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+        }`;
+        allChip.textContent = `All (${state.tasks.length})`;
+        allChip.addEventListener('click', () => {
+          poolFilter = 'all';
+          renderPool();
+        });
+        filterBar.appendChild(allChip);
+
+        state.categories.forEach(cat => {
+          const count = state.tasks.filter(t => t.categoryId === cat.id).length;
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = `px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            poolFilter === cat.id
+              ? 'bg-stone-900 text-white'
+              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+          }`;
+          chip.textContent = `${cat.name} (${count})`;
+          chip.addEventListener('click', () => {
+            poolFilter = cat.id;
+            renderPool();
+          });
+          filterBar.appendChild(chip);
+        });
+
+        // Task list
+        const listEl = document.getElementById('task-list');
+        listEl.innerHTML = '';
+        const filtered = poolFilter === 'all'
+          ? state.tasks
+          : state.tasks.filter(t => t.categoryId === poolFilter);
+
+        if (filtered.length === 0) {
+          listEl.innerHTML = `
+            <div class="bg-white rounded-xl border border-dashed border-stone-300 p-8 text-center text-sm text-stone-500">
+              No tasks in this category yet. Add one above to include it in your daily rolls.
+            </div>
+          `;
+          return;
+        }
+
+        filtered.forEach(task => {
+          const cat = getCategoryById(task.categoryId);
+          const col = getColor(cat.colorIdx);
+
+          const row = document.createElement('div');
+          row.className = `bg-white rounded-xl border border-[#e7e2d9] px-4 py-3 flex items-start sm:items-center justify-between gap-3 transition-opacity ${
+            task.active ? '' : 'opacity-55'
+          }`;
+
+          row.innerHTML = `
+            <div class="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+              <input type="checkbox" ${task.active ? 'checked' : ''} aria-label="Include task in picker"
+                class="task-toggle mt-0.5 sm:mt-0 rounded border-stone-300 text-stone-900 focus:ring-stone-800 w-4 h-4 shrink-0 cursor-pointer" />
+              <div class="min-w-0 flex-1 space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold"
+                    style="background-color:${col.bg}; color:${col.text};">${escapeHtml(cat.name)}</span>
+                </div>
+                <p class="text-sm text-stone-800 leading-snug ${task.active ? '' : 'line-through'}">${escapeHtml(task.text)}</p>
+              </div>
+            </div>
+            <button type="button" title="Delete task" aria-label="Delete task"
+              class="task-delete p-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+              </svg>
+            </button>
+          `;
+
+          row.querySelector('.task-toggle').addEventListener('change', (e) => {
+            task.active = e.target.checked;
+            saveState();
+            renderPool();
+            renderPicker();
+          });
+
+          row.querySelector('.task-delete').addEventListener('click', () => {
+            state.tasks = state.tasks.filter(t => t.id !== task.id);
+            if (state.currentPick && state.currentPick.taskId === task.id) {
+              state.currentPick = null;
+            }
+            saveState();
+            renderAll();
+            showToast('Task removed');
+          });
+
+          listEl.appendChild(row);
+        });
+      }
+
+      function renderHistory() {
+        const total = state.history.length;
+        document.getElementById('history-total-label').textContent = `${total} total`;
+
+        const clearBtn = document.getElementById('btn-clear-history');
+        if (total > 0) {
+          clearBtn.classList.remove('hidden');
+          clearBtn.textContent = confirmClearPending ? 'Click again to clear log' : 'Clear log';
+        } else {
+          clearBtn.classList.add('hidden');
+        }
+
+        // Variety bars
+        const barsEl = document.getElementById('variety-bars');
+        barsEl.innerHTML = '';
+
+        const counts = {};
+        state.categories.forEach(c => { counts[c.id] = 0; });
+        state.history.forEach(h => {
+          counts[h.categoryId] = (counts[h.categoryId] || 0) + 1;
+        });
+
+        const varietyItems = state.categories.map(c => ({ id: c.id, name: c.name, colorIdx: c.colorIdx }));
+        if ((counts['project'] || 0) > 0) {
+          varietyItems.push({ id: 'project', name: 'Larger Project', colorIdx: 7 });
+        }
+
+        varietyItems.forEach(cat => {
+          const count = counts[cat.id] || 0;
+          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+          const col = getColor(cat.colorIdx);
+
+          const row = document.createElement('div');
+          row.className = 'space-y-1';
+          row.innerHTML = `
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-medium text-stone-700">${escapeHtml(cat.name)}</span>
+              <span class="text-stone-500">${count} (${pct}%)</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-stone-100 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-300" style="width:${pct}%; background-color:${col.accent};"></div>
+            </div>
+          `;
+          barsEl.appendChild(row);
+        });
+
+        // History list
+        const listEl = document.getElementById('history-list');
+        listEl.innerHTML = '';
+
+        if (total === 0) {
+          listEl.innerHTML = `
+            <div class="bg-white rounded-xl border border-dashed border-stone-300 p-8 text-center space-y-2">
+              <p class="text-sm font-medium text-stone-700">No completed sub-tasks yet</p>
+              <p class="text-xs text-stone-500">Pick a task from the Picker tab and mark it complete to start tracking your variety.</p>
+            </div>
+          `;
+          return;
+        }
+
+        state.history.forEach(entry => {
+          const col = getColor(entry.colorIdx || 0);
+          const item = document.createElement('div');
+          item.className = 'bg-white rounded-xl border border-[#e7e2d9] p-4 space-y-1.5';
+          item.innerHTML = `
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold"
+                  style="background-color:${col.bg}; color:${col.text};">${escapeHtml(entry.categoryName)}</span>
+                ${entry.methodName ? `<span class="inline-block px-2 py-0.5 rounded-md text-[11px] font-medium bg-stone-100 text-stone-600">${escapeHtml(entry.methodName)}</span>` : ''}
+              </div>
+              <span class="text-xs text-stone-400 font-mono">${escapeHtml(entry.dateKey)}</span>
+            </div>
+            <p class="text-sm font-medium text-stone-800">${escapeHtml(entry.text)}</p>
+            ${entry.note ? `<p class="text-xs text-stone-500 bg-stone-50 rounded-lg px-2.5 py-1.5 border border-stone-100">${escapeHtml(entry.note)}</p>` : ''}
+          `;
+          listEl.appendChild(item);
+        });
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function renderAll() {
+        renderSoundIcon();
+        renderPicker();
+        renderProjects();
+        renderPool();
+        renderHistory();
+      }
+
+      // ==================== EVENT LISTENERS ====================
+      document.getElementById('tab-pick').addEventListener('click', () => switchTab('pick'));
+      document.getElementById('tab-projects').addEventListener('click', () => switchTab('projects'));
+      document.getElementById('tab-pool').addEventListener('click', () => switchTab('pool'));
+      document.getElementById('tab-history').addEventListener('click', () => switchTab('history'));
+
+      document.getElementById('btn-pick-project').addEventListener('click', pickNextProject);
+      document.getElementById('btn-proj-reroll').addEventListener('click', pickNextProject);
+      document.getElementById('btn-proj-reroll-sub').addEventListener('click', swapProjectSubTrack);
+      document.getElementById('btn-proj-complete').addEventListener('click', toggleCompleteProject);
+      document.getElementById('btn-proj-copy').addEventListener('click', copyCurrentProject);
+
+      document.getElementById('toggle-vary-project').addEventListener('change', (e) => {
+        state.varyProject = e.target.checked;
+        saveState();
+      });
+
+      document.getElementById('add-project-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('new-project-name');
+        const name = input.value.trim();
+        if (!name) return;
+        state.projects.push({
+          id: 'p_' + Date.now(),
+          name: name,
+          colorIdx: state.projects.length % COLOR_PALETTE.length,
+          enabled: true,
+          subItems: []
+        });
+        input.value = '';
+        saveState();
+        renderProjects();
+        showToast('Project added');
+      });
+
+      document.getElementById('btn-reset-projects').addEventListener('click', () => {
+        if (!confirmResetProjectsPending) {
+          confirmResetProjectsPending = true;
+          renderProjects();
+          return;
+        }
+        confirmResetProjectsPending = false;
+        state.projects = cloneDefaultProjects();
+        state.currentProjectPick = null;
+        saveState();
+        renderProjects();
+        showToast('Restored default projects');
+      });
+
+      document.getElementById('btn-pick-main').addEventListener('click', pickNextTask);
+      document.getElementById('btn-reroll').addEventListener('click', pickNextTask);
+      document.getElementById('btn-complete').addEventListener('click', toggleCompleteCurrent);
+      document.getElementById('btn-copy').addEventListener('click', copyCurrentTask);
+      document.getElementById('btn-quick-add-link').addEventListener('click', () => switchTab('pool'));
+
+      document.getElementById('toggle-vary').addEventListener('change', (e) => {
+        state.varyCategory = e.target.checked;
+        saveState();
+      });
+
+      document.getElementById('btn-roll-method').addEventListener('click', () => rollMethod(false));
+
+      document.getElementById('toggle-pair-method').addEventListener('change', (e) => {
+        state.pairMethodWithTask = e.target.checked;
+        saveState();
+      });
+
+      const addNewMethod = () => {
+        const input = document.getElementById('new-method-name');
+        const name = input.value.trim();
+        if (!name) return;
+        if (state.methods.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+          showToast('Method already exists');
+          return;
+        }
+        state.methods.push({
+          id: 'm_' + Date.now(),
+          name: name,
+          enabled: true
+        });
+        input.value = '';
+        saveState();
+        renderPicker();
+        showToast(`Added "${name}"`);
+      };
+      document.getElementById('btn-add-method').addEventListener('click', addNewMethod);
+      document.getElementById('new-method-name').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addNewMethod();
+        }
+      });
+
+      document.getElementById('btn-sound').addEventListener('click', () => {
+        state.soundEnabled = !state.soundEnabled;
+        saveState();
+        renderSoundIcon();
+        showToast(state.soundEnabled ? 'Sound on' : 'Sound muted');
+      });
+
+      document.getElementById('today-note').addEventListener('input', (e) => {
+        if (!state.currentPick) return;
+        state.currentPick.note = e.target.value;
+        // Also update today's matching history entry note if already completed
+        if (state.currentPick.completed) {
+          const task = state.tasks.find(t => t.id === state.currentPick.taskId);
+          if (task) {
+            const entry = state.history.find(
+              h => h.dateKey === state.currentPick.dateKey && h.text === task.text
+            );
+            if (entry) entry.note = e.target.value.trim();
+          }
+        }
+        saveState();
+      });
+
+      document.getElementById('add-task-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const catId = document.getElementById('new-task-category').value;
+        const input = document.getElementById('new-task-text');
+        const text = input.value.trim();
+        if (!text) return;
+
+        state.tasks.unshift({
+          id: 't_' + Date.now(),
+          categoryId: catId,
+          text: text,
+          active: true
+        });
+        input.value = '';
+        saveState();
+        renderAll();
+        showToast('Task added to pool');
+      });
+
+      document.getElementById('btn-add-category').addEventListener('click', () => {
+        const input = document.getElementById('new-cat-name');
+        const name = input.value.trim();
+        if (!name) return;
+
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || ('cat-' + Date.now());
+        if (state.categories.some(c => c.id === slug || c.name.toLowerCase() === name.toLowerCase())) {
+          showToast('Category already exists');
+          return;
+        }
+
+        state.categories.push({
+          id: slug,
+          name: name,
+          colorIdx: state.categories.length % COLOR_PALETTE.length,
+          enabled: true
+        });
+        input.value = '';
+        saveState();
+        renderAll();
+        document.getElementById('new-task-category').value = slug;
+        showToast(`Added "${name}" category`);
+      });
+
+      document.getElementById('btn-reset-defaults').addEventListener('click', () => {
+        if (!confirmResetPending) {
+          confirmResetPending = true;
+          renderPool();
+          return;
+        }
+        confirmResetPending = false;
+        const prevHistory = state.history;
+        const prevSound = state.soundEnabled;
+        const prevProjects = state.projects;
+        const prevProjectPick = state.currentProjectPick;
+        const prevMethods = state.methods;
+        const prevMethodId = state.currentMethodId;
+        state = createDefaultState();
+        state.history = prevHistory;
+        state.soundEnabled = prevSound;
+        state.projects = prevProjects;
+        state.currentProjectPick = prevProjectPick;
+        state.methods = prevMethods;
+        state.currentMethodId = prevMethodId;
+        saveState();
+        renderAll();
+        showToast('Restored default categories & tasks');
+      });
+
+      document.getElementById('btn-clear-history').addEventListener('click', () => {
+        if (!confirmClearPending) {
+          confirmClearPending = true;
+          renderHistory();
+          return;
+        }
+        confirmClearPending = false;
+        state.history = [];
+        if (state.currentPick) state.currentPick.completed = false;
+        saveState();
+        renderAll();
+        showToast('Completed log cleared');
+      });
+
+      document.getElementById('btn-export-json').addEventListener('click', () => {
+        try {
+          const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `writing-picker-backup-${getTodayKey()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          showToast('Backup exported');
+        } catch (e) {
+          showToast('Unable to export backup');
+        }
+      });
+
+      const importInput = document.getElementById('input-import-json');
+      document.getElementById('btn-import-json').addEventListener('click', () => {
+        importInput.value = '';
+        importInput.click();
+      });
+
+      importInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const parsed = JSON.parse(String(reader.result || ''));
+            if (!parsed || !Array.isArray(parsed.categories) || !Array.isArray(parsed.tasks)) {
+              showToast('Invalid backup file');
+              return;
+            }
+            state = {
+              ...createDefaultState(),
+              ...parsed
+            };
+            if (!Array.isArray(state.projects)) state.projects = cloneDefaultProjects();
+            if (!Array.isArray(state.methods)) state.methods = DEFAULT_METHODS.map(m => ({ ...m }));
+            saveState();
+            renderAll();
+            showToast('Backup restored');
+          } catch (err) {
+            showToast('Could not read JSON file');
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      // Spacebar shortcut on Picker & Projects tabs (when not typing in an input/textarea)
+      document.addEventListener('keydown', (e) => {
+        if (activeTab !== 'pick' && activeTab !== 'projects') return;
+        const tag = (document.activeElement && document.activeElement.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (e.code === 'Space') {
+          e.preventDefault();
+          if (activeTab === 'pick') {
+            pickNextTask();
+          } else {
+            pickNextProject();
+          }
+        }
+      });
+
+      // Initial render
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
